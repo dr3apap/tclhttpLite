@@ -18,8 +18,8 @@ namespace eval ::httpLite {
 namespace eval ::private {
     package require httpLiteUtils 1.0  ;# Version
     variable default_server ""         ;# maybe Workers List?
-    variable httpLite_mw {}            ;# Middleware
-    variable err_midw ""               ;# Error Middleware check
+    variable httpLite_midw {}          ;# Middleware
+    variable err_midw ""               ;# Error Middleware Index
     variable next_midw 0               ;# Middleware index "CLOSURE"
     variable req_obj {}                ;# Shared Request object
     variable EOT 0                     ;# End of transmission (SIGNAL PER wORKER?)
@@ -91,12 +91,13 @@ proc ::httpLite::listen {port server_init {type ""}} {
 
 
 proc ::httpLite::use {cb} {
-    set err_midw_match [regexp {^(error)?.*?(error)?$} $cb] 
-    if {$err_midw_match ne ""} {
-	lappend ::private::irmw $cb 
-	set ::private::ERR_MIDW [lindex ::private::irmw cb]
+    set err_midw_match [regexp {^(error)+.*?} $cb] 
+    if {$err_midw_match != 0} {
+	# Use array instead of list set ::private::httpLite_midw(error) $cb? 
+	lappend ::private::httpLite_midw $cb 
+	set ::private::err_midw [lsearch $::private::httpLite_midw $cb]
     } else {
-	lappend ::private::irmw $cb
+	lappend ::private::httpLite_midw $cb
     }
 }
 
