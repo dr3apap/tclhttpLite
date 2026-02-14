@@ -209,12 +209,12 @@ proc ::httpLiteUtilsJson {json_str} {
 
 proc ::res::status {status_code {message ""}} {
     ::httpLiteUtils::status $status_code $message
-
 }
 
 
 proc ::res::end {res_body {body_format ""}} {
     ::httpLiteUtils::end $res_body $body_format
+    return 0
 }
 
 proc ::res::json  {json_str} {
@@ -223,20 +223,20 @@ proc ::res::json  {json_str} {
 }
 
 proc ::res::setHeaders {dict_header} {
-	return ::httpLiteUtils::setHeaders $dict_header 
+    return [::httpLiteUtils::setHeaders $dict_header]
 }
 
 proc ::res::getHeaders {{h_key ""}} {
 	
-	return ::httpLiteUtils::getHeaders $h_key
+    return [::httpLiteUtils::getHeaders $h_key]
 }
 
 proc ::res::stringify {json_obj} {
-	return ::httpLiteUtilsStringify $json_obj
+    return [::httpLiteUtilsStringify $json_obj]
 }
 
 proc ::res::binary {binary_obj} {
-    return httpLiteUtilsBinary $binary_obj
+    return [::httpLiteUtilsBinary $binary_obj]
     
 }
 
