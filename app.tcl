@@ -32,24 +32,55 @@ namespace eval ::httpLite {
     namespace ensemble create
 }
 
-set PORT 33000 ;# Testing/Development port
-
+set PORT 33000       ;# Testing/Development port
+set favi_path ""     ;# Used to test /favicon.ico.
 proc handleRoot {} {
     global PORT
     puts "Server running on $PORT!!"
 }
 
-proc sayHi {req res} {
+proc sayHi {req res {next}} {
      set data "<h1>Receive Acknowledgement</h1>"
     if {[dict get $req req_target ] eq "/greeting"} {
-        puts [res::setHeaders [dict create Content-Type text/html Content-Length [string length $data]]]
-	 res::status 200
-	 res::end $data  
+	$next
+        res::setHeaders [dict create Content-Type text/html Content-Length [string length $data]]
+	res::status 200
+	res::end $data  
     } else {
 	res::status 401
     }
-
 }
-httpLiteRouter get "/greeting" sayHi
-#httpLite get "/greeting" sayHi 
-httpLite listen $PORT handleRoot
+
+proc errorMidw {err req res} {
+    res::status 500
+    res::end "<h3>Pls try again, Something went wrong</h3>"
+}
+
+proc upperRes {req res} {
+    #puts "Testing midWare:  [string toupper [dict get $req req_target]]"
+    puts "HEY!!!!"
+}
+
+
+proc favRes {req res {next}} {
+    global favi_path
+    set favi_chan [open $favi_path r]
+    set buff "" 
+    if {[dict get $req req_target] eq "/favicon.ico"} {
+        while {[gets $favi_chan line] > 0} {
+	    append buff $line 
+	}
+	$next
+	res::setHeaders [dict create Content-Type image/png Content-Length [string length $buff] Connection close]
+        res::status 200
+        res::end $buff 
+    } else {
+	$next "Error"
+    }
+}
+
+#httpLite use upperRes
+#httpLite use errorMidw 
+#httpLiteRouter get "/greeting" sayHi
+#httpLiteRouter get "/favicon.ico" favRes
+#httpLite listen $PORT handleRoot
