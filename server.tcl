@@ -127,18 +127,18 @@ proc ::httpLite::headers {path cb} {
 
 proc ::private::parseReqLine {req_line_str} {
     #puts [format "Current REQ-LINE:=> %s\n" $req_line_str]
-    regexp -nocase -all {(?x)(\w+)\s+([^\d_]\w+\:\W{2})?(?:(\W+(?:(?:\w+)?\W?)?)*?)\s+(\W?\w+\W\d+\W\d+)(?:\\r|\\n)?} $req_line_str matched_url req_method req_scheme req_target proto
+    regexp -nocase -all {(?x)(\w+)\s+([^\d_]\w+\:\W{2})?(?:(\W+(?:(?:\w+)?\W?\w+?)?)*?)\s+(\W?\w+\W\d+\W\d+)(?:\\r|\\n)?} $req_line_str matched_url req_method req_scheme req_target proto
     return [dict create url $matched_url req_method [string tolower $req_method] req_scheme $req_scheme req_target $req_target proto $proto]
 }
 
 proc ::private::parseHeaderLines {header_str} {
-    puts [format "Current HEADER-LINE:=> %s\n" $header_str]
+    #puts [format "Current HEADER-LINE:=> %s\n" $header_str]
     regexp -nocase {(?x)((?:\w+(?:\-+)?)+?(?:\s)*?)\:(.+)(?:\\r|\\n)?} $header_str matched_header header_key header_val
     return [dict create header [dict create header_str $matched_header $header_key $header_val]]
 }
 
 proc ::private::parseHostLine {host_header} {
-    puts [format "HOsT-LINE:=> %s\n" $host_header]
+    #puts [format "HOsT-LINE:=> %s\n" $host_header]
     regexp -nocase {(?x)((?:\w+\-?)+\:\s*?(?:[^\d_](?:\w{1,4}?\:\W{2}))?(?:\w{3}\.)?(?:\w+\.??\w+))(\:\d+)?(?:\\r|\\n)?} $host_header matched_host host port 
     return [dict create host_header [dict create req_host $matched_host host $host port $port]]
 }
