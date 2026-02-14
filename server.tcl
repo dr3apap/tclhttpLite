@@ -102,17 +102,7 @@ proc ::httpLite::use {cb} {
 }
 
 
-proc ::private::next {err} {
-    if {err ne ""} {
-	if {::private::ERR_MIDW ne ""} {
-	    [namespace current][lindex ::private::irmw $::private::ERR_MIDW] $err
-	} else {
-	    # Handle Error of not finding Error middleware
-	}
-    } 
-    lindex ::private::irmw $::private::next_midw_index
-    incr ::private::next_midw_index
-}
+
 
 proc ::httpLite::get {path cb} {
     httpLiteRouter get $path $cb
