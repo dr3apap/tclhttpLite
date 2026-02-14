@@ -183,15 +183,34 @@ proc ::private::readLine {who channel buffer } {
 	set len [string length $buff]
     }	
     
-    proc defaultNotFound {req res } {
-	res::end "<h2>$path NOt Found!!</h2>"
+    proc defaultNotFound {req res {next ""} } {
+	res::status 400
+	res::end "<h2>NOt Found!!</h2>"
     }
     set curr_route  [dict get $::httpLiteRouter::httpLiteRouter_obj $method]
-    set targetHandler [expr {[dict exists $curr_route $path] ? [dict get $curr_route $path ] : $defaultNotFound }]
+    set targetHandler [expr {[dict exists $curr_route $path] ? [dict get $curr_route $path ] : "defaultNotFound"}]
     regsub -all  {\s} $buff {} temp_buff
     #puts "$temp_buff"
     #puts "EOT is now: $::httpLite::EOT"
     set res_obj "::httpLiteUtils::res"
-    $targetHandler $req_obj $res_obj
+    proc ::private::next { {err ""}} {
+	upvar req req
+	upvar res res
+	puts "INSIDE-NEXT: REQ:->$req RES:->$res"
+	if {$err ne ""} {
+	    if {[set err_cb [lindex $::private::httpLite_midw $::private::err_midw]] ne ""} {
+		$err_cb $err $req $res
+	    }  else {
+		incr ::private::next_midw
+	    }
+	} else {
+	    if {$::private::httpLite_midw == $::private::err_midw} {
+		incr ::private::next_midw
+	    }
+	    set midw_cb [lindex $::private::httpLite_midw $::private::next_midw]
+	    $midw_cb $req $res
+	    incr ::private::next_midw 
+	}
+    }   
+    $targetHandler $req_obj $res_obj "::private::next"
 }
-
