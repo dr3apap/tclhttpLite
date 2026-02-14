@@ -151,7 +151,7 @@ to set the RESPONSE-LINE"
     foreach {k v} $res_headers {
 	if {$k eq "res_line"} continue
 	puts "SENDING RESPONSE: {$k:$v}"
-	puts $channel [format "%s: s" $k $v]
+	puts $channel [format "%s: %s" $k $v]
     }
 }
 
