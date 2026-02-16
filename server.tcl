@@ -19,6 +19,7 @@ namespace eval ::private {
     package require httpLiteUtils 1.0  ;# Version
     variable default_server ""         ;# maybe Workers List?
     variable httpLite_midw {}          ;# Middleware
+    variable httpLite_midw_len 0
     variable err_midw ""               ;# Error Middleware Index
     variable next_midw 0               ;# Middleware index "CLOSURE"
     variable req_obj {}                ;# Shared Request object
@@ -29,7 +30,7 @@ namespace eval ::private {
     # Utilities for manipulating Response
     namespace eval ::httpLiteUtils {
 	namespace ensemble create
-	namespace export setHeaders getHeaders body status
+	namespace export setHeaders getHeaders body status httpLiteNotify dupKeys
     }
 }
 
@@ -59,7 +60,6 @@ proc ::private::server {channel addr port} {
     
 }
 
-
 # Call the internal Server with the server Routine
 proc ::private::createServer {port type} {
     #TODO: Generate AES to wrap transactions [::tls::socket -options ]
@@ -86,22 +86,28 @@ proc ::httpLite::listen {port server_init {type ""}} {
 	puts "ERROR: $msg"
     }
     vwait forever
-    # TODO: Load balancer <Software load manager<(Hardware with fast timing)>
+    # TODO: Load balancer <Software load manager <(Hardware with fast timing)>>
 }
-
 
 proc ::httpLite::use {cb} {
     set err_midw_match [regexp {^(error)+.*?} $cb] 
     if {$err_midw_match != 0} {
-	# Use array instead of list set ::private::httpLite_midw(error) $cb? 
-	lappend ::private::httpLite_midw $cb 
-	set ::private::err_midw [lsearch $::private::httpLite_midw $cb]
+	if {$::private::err_midw eq ""} {
+	    # Use array instead of list set ::private::httpLite_midw(error) $cb? 
+	    lappend ::private::httpLite_midw $cb 
+	    set ::private::err_midw $::private::httpLite_midw_len ;# Set the Error midware index
+	    incr ::private::httpLite_midw_len
+	} else {
+	    # There can only be one error middware
+	    # Gracefully allow user to confirm updating
+	    # an error middleware or to abort  
+	    ::httpLiteUtils::dupKeys "An Error middleware exist: \[u/update? or a/abort?\]: " "w" 
+	}
     } else {
 	lappend ::private::httpLite_midw $cb
+	incr ::private::httpLite_midw_len
     }
 }
-
-
 
 
 proc ::httpLite::get {path cb} {
@@ -185,31 +191,35 @@ proc ::private::readLine {who channel buffer } {
     
     proc defaultNotFound {req res {next ""} } {
 	res::status 400
-	res::end "<h2>NOt Found!!</h2>"
+	res::end "<h3>NOt Found!!</h3>"
     }
     set curr_route  [dict get $::httpLiteRouter::httpLiteRouter_obj $method]
     set targetHandler [expr {[dict exists $curr_route $path] ? [dict get $curr_route $path ] : "defaultNotFound"}]
     regsub -all  {\s} $buff {} temp_buff
-    #puts "$temp_buff"
-    #puts "EOT is now: $::httpLite::EOT"
     set res_obj "::httpLiteUtils::res"
     proc ::private::next { {err ""}} {
 	upvar req req
 	upvar res res
-	puts "INSIDE-NEXT: REQ:->$req RES:->$res"
+	if {[expr { $::private::next_midw >= $::private::httpLite_midw_len }]} {
+	    ::httpLiteUtils::notify "Out of Middleware Bound!!" "error"
+	    return "<MIDDWARE NULL $::private::httpLite_midw_len>"
+	}
+	::httpLiteUtils::notify "INSIDE-NEXT: REQ:->$req RES:->$res"
 	if {$err ne ""} {
 	    if {[set err_cb [lindex $::private::httpLite_midw $::private::err_midw]] ne ""} {
 		$err_cb $err $req $res
+		return "<MIDDWARE $err_cb $::private::err_midw>"
 	    }  else {
-		incr ::private::next_midw
+		::httpLiteUtils::notify "No Registered ERROR MIDDLEWARE" "error" 
 	    }
 	} else {
-	    if {$::private::httpLite_midw == $::private::err_midw} {
+	    if {$::private::httpLite_midw_len == $::private::err_midw} {
 		incr ::private::next_midw
 	    }
 	    set midw_cb [lindex $::private::httpLite_midw $::private::next_midw]
 	    $midw_cb $req $res
 	    incr ::private::next_midw 
+	    return "<MIDDWARE $midw_cb $::private::next_midw>"
 	}
     }   
     $targetHandler $req_obj $res_obj "::private::next"
