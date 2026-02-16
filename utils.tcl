@@ -1,7 +1,7 @@
 package provide httpLiteUtils 1.0
 package require Tcl 8.6
 namespace eval ::httpLiteUtils {
-    namespace export setHeaders getHeaders body status 
+    namespace export setHeaders getHeaders body status dupKeys 
     variable res_headers {}  
     variable httpLite_statuscode_message [dict create]
     variable tmp_statuscode {
@@ -155,7 +155,6 @@ to set the RESPONSE-LINE"
     }
 }
 
-
 ### User interface res message
 # Overload to set the status code message or one shot
 # to attached a message to a statuscode
@@ -240,3 +239,70 @@ proc ::res::binary {binary_obj} {
     
 }
 
+proc ::httpLiteUtils::notify {msg {type ""} {flags ""}} {
+    proc checkFlags {type} {
+	upvar flags flags
+	upvar msg msg
+
+	switch $flags {
+	    "" {
+		puts stderr [format "$type: %s" $msg]
+		flush stdout
+	    }
+	    "-n" -
+	    "n"  -
+	    "nonewline" -
+	    "-nonewline" {
+		puts -nonewline stderr  [format "$type: %s" $msg]
+		flush stdout
+	    }
+	}
+	
+    }
+    switch "[string tolower $type]" {
+	w -  
+	"warning" {
+	    checkFlags WARNING
+	    flush stdout
+	}
+	e - 
+	"error" {
+	    checkFlags ERROR
+	    #  expr {$flags eq "" ? [puts stderr [format "ERROR: %s" $msg]] : \
+		#      [puts -nonewline stderr  [format "ERror: %s" $msg]]}
+	}
+	o -
+	"output" -  
+	default {
+	    puts [format "%s" $msg]
+	    flush stdout
+	}
+    }
+}
+
+proc ::httpLiteUtils::input {msg {type ""} {fmt ""} args} {
+    ::httpLiteUtils::notify $msg $type $fmt
+    set advise [gets stdin]
+    set trimmed_pattern [regsub -all {\s} $args {} ] 
+    while {[regexp {$trimmed_pattern} $advise]  } {
+	::httpLiteUtils::notify $msg $type $fmt
+	set advise [gets stdin]
+    }
+    return $advise
+}
+
+proc ::httpLiteUtils::dupKeys {msg type} {
+    upvar cb cb
+    upvar $::private::httpLite_midw midw
+    upvar $::private::httpLite_midw_len midw_len
+    # get the user input<ADVISE>
+    set advise [string tolower [::httpLiteUtils::input $msg $type -n "u|update" "|" "a|abort"]]
+    if {$advise eq "u" || $advise eq "update"} {
+	lappend midw $cb
+	incr midw_len
+	puts $midw_len 
+	puts "MIDDLEWARE: $midw"
+    } elseif {$advise eq "a" || $advise eq "abort"} {
+	puts "Aborting!!"
+    }    
+} 
