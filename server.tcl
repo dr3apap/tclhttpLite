@@ -200,27 +200,33 @@ proc ::private::readLine {who channel buffer } {
     proc ::private::next { {err ""}} {
 	upvar req req
 	upvar res res
-	if {[expr { $::private::next_midw >= $::private::httpLite_midw_len }]} {
-	    ::httpLiteUtils::notify "Out of Middleware Bound!!" "error"
-	    return "<MIDDWARE NULL $::private::httpLite_midw_len>"
-	}
 	::httpLiteUtils::notify "INSIDE-NEXT: REQ:->$req RES:->$res"
 	if {$err ne ""} {
-	    if {[set err_cb [lindex $::private::httpLite_midw $::private::err_midw]] ne ""} {
+	    if {$private::err_midw ne ""} {
+		set err_cb [lindex $::private::httpLite_midw $::private::err_midw]
 		$err_cb $err $req $res
-		return "<MIDDWARE $err_cb $::private::err_midw>"
+		return "<MIDDLEWARE $err_cb $::private::err_midw>"
 	    }  else {
-		::httpLiteUtils::notify "No Registered ERROR MIDDLEWARE" "error" 
+		::httpLiteUtils::notify "<No registered \"ERROR MIDDLEWARE\">" "error" 
 	    }
 	} else {
-	    if {$::private::httpLite_midw_len == $::private::err_midw} {
-		incr ::private::next_midw
+	    if {($::private::next_midw == $::private::err_midw) && ([expr {[incr ::private::next_midw] < $::private::httpLite_midw_len}]) } {
+		set midw_cb [lindex $::private::httpLite_midw $::private::next_midw]
+		$midw_cb $req $res
+		incr ::private::next_midw 
+		return "<MIDDLEWARE $midw_cb $::private::next_midw>"
+	    } elseif {[expr { $::private::next_midw >= $::private::httpLite_midw_len }]} {
+		::httpLiteUtils::notify "Middleware out of Bound!!" "error"
+		return "<MIDDLEWARE NULL $::private::httpLite_midw_len>"
+	    } else {
+		set midw_cb [lindex $::private::httpLite_midw $::private::next_midw]
+		$midw_cb $req $res
+		incr ::private::next_midw 
+		return "<MIDDLEWARE $midw_cb $::private::next_midw>"
 	    }
-	    set midw_cb [lindex $::private::httpLite_midw $::private::next_midw]
-	    $midw_cb $req $res
-	    incr ::private::next_midw 
-	    return "<MIDDWARE $midw_cb $::private::next_midw>"
 	}
-    }   
+	
+    }
     $targetHandler $req_obj $res_obj "::private::next"
 }
+
