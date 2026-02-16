@@ -43,12 +43,13 @@ proc handleRoot {} {
 proc sayHi {req res {next}} {
      set data "<h1>Receive Acknowledgement</h1>"
     if {[dict get $req req_target ] eq "/greeting"} {
-	$next
+	puts "[$next]"
+	puts "[$next]"
         res::setHeaders [dict create Content-Type text/html Content-Length [string length $data]]
 	res::status 200
 	res::end $data  
     } else {
-	res::status 401
+	res::status 401 ;# Just for testing (There should be a general notFound route handler)
     }
 }
 
@@ -70,18 +71,19 @@ proc favRes {req res {next}} {
         while {[gets $favi_chan line] > 0} {
 	    append buff $line 
 	}
-	$next
+	puts "CALLING NEXT: [$next]"
 	res::setHeaders [dict create Content-Type image/png Content-Length [string length $buff] Connection close]
         res::status 200
         res::end $buff 
     } else {
-	$next "Error"
+	$next "Error" ;# Just for testing (There should be a general notFound route handler)
+
     }
 }
 
-httpLite use upperRes
-httpLite use errorMidw 
-httpLite use errorTest
-httpLiteRouter get "/greeting" sayHi
-httpLiteRouter get "/favicon.ico" favRes
-httpLite listen $PORT handleRoot
+#httpLite use upperRes
+#httpLite use errorMidw 
+##httpLite use errorTest
+#httpLiteRouter get "/greeting" sayHi
+#httpLiteRouter get "/favicon.ico" favRes
+#httpLite listen $PORT handleRoot
