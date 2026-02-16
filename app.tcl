@@ -1,4 +1,5 @@
-#!/usr/bin/env tclsh
+#!/usr/bin/env tcls
+
 
 # A small Application that test the fucntionality of the <httpLite version 1.0 package>           
 # Additinal packages <httpLiteRouter version 1.0, httpLiteUtils provided as REQUEST and RESPONSE OBJ>
@@ -61,7 +62,6 @@ proc upperRes {req res} {
     puts "HEY!!!!"
 }
 
-
 proc favRes {req res {next}} {
     global favi_path
     set favi_chan [open $favi_path r]
@@ -79,8 +79,9 @@ proc favRes {req res {next}} {
     }
 }
 
-#httpLite use upperRes
-#httpLite use errorMidw 
-#httpLiteRouter get "/greeting" sayHi
-#httpLiteRouter get "/favicon.ico" favRes
-#httpLite listen $PORT handleRoot
+httpLite use upperRes
+httpLite use errorMidw 
+httpLite use errorTest
+httpLiteRouter get "/greeting" sayHi
+httpLiteRouter get "/favicon.ico" favRes
+httpLite listen $PORT handleRoot
