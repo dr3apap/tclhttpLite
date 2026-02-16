@@ -1,3 +1,5 @@
 *.tcl~
+*~
 pkgIndex.tcl
-.env
+*.env
+*.txt
