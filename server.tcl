@@ -101,7 +101,7 @@ proc ::httpLite::use {cb} {
 	    # There can only be one error middware
 	    # Gracefully allow user to confirm updating
 	    # an error middleware or to abort  
-	    ::httpLiteUtils::dupKeys "An Error middleware exist: \[u/update? or a/abort?\]: " "w" 
+	    ::httpLiteUtils::dupKeys "An Error middleware exist: (u/update? or a/abort?): " "w" 
 	}
     } else {
 	lappend ::private::httpLite_midw $cb

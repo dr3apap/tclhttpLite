@@ -1,7 +1,7 @@
 package provide httpLiteUtils 1.0
 package require Tcl 8.6
 namespace eval ::httpLiteUtils {
-    namespace export setHeaders getHeaders body status dupKeys 
+    namespace export setHeaders getHeaders body status input dupKeys 
     variable res_headers {}  
     variable httpLite_statuscode_message [dict create]
     variable tmp_statuscode {
