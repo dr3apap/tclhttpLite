@@ -1,5 +1,11 @@
-*.tcl~
 *~
-pkgIndex.tcl
 *.env
 *.txt
+utils.tcl
+public/
+home/
+.png
+.js~?
+.css
+.html
+client.tcl
