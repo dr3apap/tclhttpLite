@@ -117,7 +117,6 @@ proc devServer::_createResponse {res path} {
 		    set mime_type {"text/plain" "plain"}
 		}
 	    }
-	    puts "MIME_TYPE: $mime_type"
 	    set size [file size $path]
 	    return [devServer::_sendResponse $res $path $mime_type]
 	} else {
@@ -167,7 +166,7 @@ proc devServer::_handleFav {res {dir ""}} {
 	return  [dict create $k $v]
     }
     if {[set icon_path [dr3Utils globPattern {-nocomplain -types f} {*favicon{.png,jpeg,ico}*}]] ne {}} {
-	puts "icon_path"
+	#puts "icon_path"
 	set size [file size $icon_path]
 	set icon [dr3Utils readLines $icon_path devServer::_getContent {} "binary" $size]
 	res::setHeaders [dr3Utils mapKeyVal mapkv {"content-type" "content-length"} [list "image/x-icon" $size]]
@@ -265,7 +264,6 @@ proc devServer::helpers::getLandingPage {res} {
     if {$::devServer::base_dir ne ""} {
 	set resources [dr3Utils globPattern {-nocomplain -nocase -directory -types f} {*.html}] 
 	if {$resources ne ""} {
-	    puts "REQPATH: $base_dir"
 	    set full_path [file join $base_dir [lindex $resources 0]]
 	    devServer::helpers::getFilesToWatch $base_dir "html"
 	    return [devServer::_sendResponse $res $base_dir {"text/html" "text" "html"}]
@@ -275,7 +273,6 @@ proc devServer::helpers::getLandingPage {res} {
 	set resources [dr3Utils globPattern {-nocomplain -nocase -directory -types f} {*.html}] 
 	if {$resources ne ""} {
 	    set full_path [file join [pwd] [lindex $resources 0]]
-	    puts "REQPATH: $full_path"
 	    devServer::helpers::getFilesToWatch $full_path "html"
 	    return [devServer::_sendResponse $res $full_path {"text/html" "text" "html"}]
 	}
