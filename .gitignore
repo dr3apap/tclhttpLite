@@ -9,3 +9,4 @@ home/
 *.html
 client.tcl
 private.tcl
+app.tcl
