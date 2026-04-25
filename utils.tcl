@@ -117,26 +117,3 @@ proc dr3Utils::globPattern {pattern {fmt_opts {}}} {
     return [glob {*}$fmt_opts -- $pattern] 
 }
 
-#catch {open "./README.md" r} fh options
-#puts "[set len [gets $fh line]] $len $line"
-#puts "[lassign [::dr3Utils::_readLine $fh] len line] $len $line"
-#puts "[lassign [::dr3Utils::readLine $fh test_readLine] len line] $len $line"
-#puts "$fh $options"
-#puts "[::dr3Utils::readLines $fh testUpper {} text]"
-
-#set full_path [file join [pwd] "/public/index.html"]
-#set test "/public/index.html"
-#regexp -nocase -all {(?x)^/public/(\w+)?.(\w+)?} $test path asset_name asset_type
-#puts "RES: P:$path A:$asset_name $asset_type"
-
-# Monitor a file for mtime
-# Register a realtime signal
-# if file is modiffied send a signal to
-# the browser to request the data
-# State: when program Start->(server ) (OnModified watch->(file name been watched))
-# transition onModified(file-name) -> Restart(server) 
-# Go from Start(server) (serve files) -> WatchFile ->(file) -> onFileModified(file modified) -> Restart(server) 
-# when file 
-# start watch (file name been watched)
-# watch file modified -> modified
-# Restart 
