@@ -136,38 +136,62 @@ proc ::httpLite::headers {path cb} {
     httpLiteRouter headers $path $cb
 }
 
+proc ::httpLite::wsDone {} {
+    return $::private::on_done
+}
 
+# Compute Request Line
 proc ::private::parseReqLine {req_line_str} {
     #puts [format "Current REQ-LINE:=> %s\n" $req_line_str]
-    regexp -nocase -all {(?x)(\w+)\s+([^\d_]\w+\:\W{2})?(?:(\W+(?:(?:\w+)?\W?\w+?)?)*?)\s+(\W?\w+\W\d+\W\d+)(?:\\r|\\n)?} $req_line_str matched_url req_method req_scheme req_target proto
-    return [dict create url $matched_url req_method [string tolower $req_method] req_scheme $req_scheme req_target $req_target proto $proto]
+   regexp -nocase -all {(?x) (\w+)\s+([^\d_]\w+\:\W{2})?/+((?:\w|\W|\d)+?(?:\w|\W|\d)+?(?:\.\w+)?)?\s+(\W?\w+\W\d+\W\d+)(?:\\r|\\n)?} $req_line_str matched_url req_method req_scheme req_target proto
+   return [dict create url $matched_url req_method [string tolower $req_method] req_scheme $req_scheme req_target $req_target proto $proto]
 }
 
+# Compute Request Headers
 proc ::private::parseHeaderLines {header_str} {
-    #puts [format "Current HEADER-LINE:=> %s\n" $header_str]
-    regexp -nocase {(?x)((?:\w+(?:\-+)?)+?(?:\s)*?)\:(.+)(?:\\r|\\n)?} $header_str matched_header header_key header_val
-    return [dict create header [dict create header_str $matched_header $header_key $header_val]]
+    #puts [format "Current HEADER-LINE:=> HS:%s\n" $header_str]
+    regexp -nocase {(?x) ^(\w+(?:\-?\w+)+?)\:(\s+.+)(?:\\r|\\n)?$} $header_str matched_header header_key header_val
+    #puts [format "Current HEADER-LINE:=> %s\n KEY:{%s}:VAL:{%s}" $matched_header $header_key $header_val] 
+    #puts [format "Current HEADER-LINE:=> %s\n" $matched_header] 
+    return [dict create [string tolower $header_key] $header_val]
 }
 
+# Compute Host header
 proc ::private::parseHostLine {host_header} {
     #puts [format "HOsT-LINE:=> %s\n" $host_header]
-    regexp -nocase {(?x)((?:\w+\-?)+\:\s*?(?:[^\d_](?:\w{1,4}?\:\W{2}))?(?:\w{3}\.)?(?:\w+\.??\w+))(\:\d+)?(?:\\r|\\n)?} $host_header matched_host host port 
+    regexp -nocase {(?x) ((?:\w+\-?)+\:\s*?(?:[^\d_](?:\w{1,4}?\:\W{2}))?(?:\w{3}\.)?(?:\w+\.??\w+))(\:\d+)?(?:\\r|\\n)?} $host_header matched_host host port 
     return [dict create host_header [dict create req_host $matched_host host $host port $port]]
 }
 
+# Compute Request body
 proc ::private::parseBodyLines {body_str} {
     regexp -nocase {(?x)(.*)(?:\\r\\n)?} $body_str body
     return [dict create req_body body $body]
-    
 }
 
-proc ::private::readLine {who channel buffer } {
-    upvar $buffer buff
-    set req_obj {}
-    set res_obj {}
+proc ::private::readLine {channel} {
+    lassign [::private::buildReqObj $channel] buff req_obj
+    if {$buff eq "" || $req_obj eq ""} {
+	return
+    }
+    set method [dr3Utils getDictVal $req_obj req_method]
+    set path [dr3Utils getDictVal $req_obj req_target]
+    regsub -all {(?x) ^/|/$} $path {} trimmed_path
+    set routes  [dict get $::httpLiteRouter::httpLiteRouter_obj $method]
+    set targetHandler [expr {[dict exists $routes $trimmed_path] ? [dict get $routes $trimmed_path ] : "::private::defaultNotFound"}]
+    set targetHandler [expr {[string first "public/" $trimmed_path] >= 0 ? [dict get $routes "public"] : $targetHandler}]
+    regsub -all  {\s} $buff {} temp_buff
+    set res_obj "::httpLiteUtils::res"
+    $targetHandler [dict set req_obj req_target $trimmed_path]  $res_obj "::private::next"
+}
+
+# Compute request objects
+proc ::private::buildReqObj {channel} {
+    variable on_done
     set ln_num 0 
     set body_begin 0
-    set method ""
+    set buff "" 
+    set req_obj {}
     while {[set len [gets $channel line]] >= 0 } {
 	if {$len > 0} {
 	    incr ln_num
@@ -180,59 +204,92 @@ proc ::private::readLine {who channel buffer } {
 	
 	if {$ln_num == 1} {
 	    set req_obj [dict merge $req_obj [::private::parseReqLine $line]]
-	    set method [dict get $req_obj req_method] 
-	    set path [dict get $req_obj req_target]
 	} elseif {$ln_num == 2} {
 	    set req_obj [dict merge $req_obj [::private::parseHostLine $line]]
 	} else {
-	    set req_obj [dict merge $req_obj [::private::parseHeaderLines $line]]
+	    set req_obj [private::buildReqHeader $req_obj [::private::parseHeaderLines $line]]
 	}    
-	
+
 	if {$body_begin} {
 	    set req_obj [dict merge $req_obj [::private::parseBodyLines $line]]
 	}
 	append buff $line "\n" 
 	set len [string length $buff]
-    }	
-    
-    proc defaultNotFound {req res {next ""} } {
-	res::status 400
-	res::end "<h3>NOt Found!!</h3>"
     }
-    set curr_route  [dict get $::httpLiteRouter::httpLiteRouter_obj $method]
-    set targetHandler [expr {[dict exists $curr_route $path] ? [dict get $curr_route $path ] : "defaultNotFound"}]
-    regsub -all  {\s} $buff {} temp_buff
-    set res_obj "::httpLiteUtils::res"
-    proc ::private::next { {err ""}} {
-	upvar req req
-	upvar res res
-	::httpLiteUtils::notify "INSIDE-NEXT: REQ:->$req RES:->$res"
-	if {$err ne ""} {
-	    if {$private::err_midw ne ""} {
-		set err_cb [lindex $::private::httpLite_midw $::private::err_midw]
-		$err_cb $err $req $res
-		return "<MIDDLEWARE $err_cb $::private::err_midw>"
-	    }  else {
-		::httpLiteUtils::notify "<No registered \"ERROR MIDDLEWARE\">" "error" 
-	    }
+    if {$len < 0} {
+	set on_done 1
+	after idle "close $channel"
+    }
+    return [list $buff $req_obj]
+}	
+
+# Default not found route Routine
+proc ::private::defaultNotFound {req res {next ""} } {
+    proc mapkv {k v} {
+	return  [dict create $k $v]
+    }
+    if {[set path [dict get $req req_target]]  eq "/favicon.ico"} {
+	if {[set icon_path [glob -nocomplain -types f *favicon{.png,jpeg,ico}*]] ne {}} {
+	    set icon [read [open $icon_path r]]
+	    res::setHeaders [dr3Utils::mapKeyVal mapkv {"content-type" "content-length"} [list "image/x-icon"  [string length $icon]]]
+	    res::status 200
+	    res::end $icon
+	    return 0
+
 	} else {
-	    if {($::private::next_midw == $::private::err_midw) && ([expr {[incr ::private::next_midw] < $::private::httpLite_midw_len}]) } {
-		set midw_cb [lindex $::private::httpLite_midw $::private::next_midw]
-		$midw_cb $req $res
-		incr ::private::next_midw 
-		return "<MIDDLEWARE $midw_cb $::private::next_midw>"
-	    } elseif {[expr { $::private::next_midw >= $::private::httpLite_midw_len }]} {
-		::httpLiteUtils::notify "Middleware out of Bound!!" "error"
-		return "<MIDDLEWARE NULL $::private::httpLite_midw_len>"
-	    } else {
-		set midw_cb [lindex $::private::httpLite_midw $::private::next_midw]
-		$midw_cb $req $res
-		incr ::private::next_midw 
-		return "<MIDDLEWARE $midw_cb $::private::next_midw>"
-	    }
+	    res::setHeaders [dr3Utils::mapKeyVal mapkv {"content-type" "content-length"} [list "image/x-icon" 0]]
+	    res::status 204
+	    res::end ""
+	    return 0
 	}
-	
     }
-    $targetHandler $req_obj $res_obj "::private::next"
+    set message "<h3>Bad Request!!</h3>"
+    set len [string length $message]
+    res::setHeaders [dr3Utils::mapKeyVal mapkv {"content-type" "content-length"} [list "text/html" [string length $message]]]
+    res::status 400
+    res::end $message
+    return 0
 }
 
+# Iterator routine for next hooks/callback
+proc ::private::next { {err ""}} {
+    upvar req req
+    upvar res res
+    ::httpLiteUtils::notify "INSIDE-NEXT: REQ:->$req RES:->$res"
+    if {$err ne ""} {
+	if {$private::err_midw ne ""} {
+	    set err_cb [lindex $::private::httpLite_midw $::private::err_midw]
+	    $err_cb $err $req $res
+	    return "<MIDDLEWARE $err_cb $::private::err_midw>"
+	}  else {
+	    ::httpLiteUtils::notify "<No registered \"ERROR MIDDLEWARE\">" "error" 
+	}
+    } else {
+	if {($::private::next_midw == $::private::err_midw) && ([expr {[incr ::private::next_midw] < $::private::httpLite_midw_len}]) } {
+	    set midw_cb [lindex $::private::httpLite_midw $::private::next_midw]
+	    $midw_cb $req $res
+	    incr ::private::next_midw 
+	    return "<MIDDLEWARE $midw_cb $::private::next_midw>"
+	} elseif {[expr { $::private::next_midw >= $::private::httpLite_midw_len }]} {
+	    ::httpLiteUtils::notify "Middleware out of Bound!!" "error"
+	    return "<MIDDLEWARE NULL $::private::httpLite_midw_len>"
+	} else {
+	    set midw_cb [lindex $::private::httpLite_midw $::private::next_midw]
+	    $midw_cb $req $res
+	    incr ::private::next_midw 
+	    return "<MIDDLEWARE $midw_cb $::private::next_midw>"
+	}
+    }
+	
+}
+
+# compute Req-Header
+proc ::private::buildReqHeader {req_obj header_dict} {
+    if {[dict exists $req_obj header]} {
+	set t [dict merge $req_obj [dict create header [dict merge [dict get $req_obj header] $header_dict ]]]
+	return $t
+    } else {
+	return [dict merge $req_obj [dict create header $header_dict]]
+    }
+
+}
