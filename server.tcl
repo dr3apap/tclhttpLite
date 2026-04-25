@@ -44,32 +44,25 @@ namespace eval ::private {
     }
 }
 
-
+# Callback for onRequest (This get called when the network card receive data)
+# Channel is the IO for buffering request data
 proc ::private::server {channel addr port} {
     variable httpLite_channel
     if {$channel ne ""} {
-	puts "Server ready on port:$port"
+	#puts "Request arrived on port:$port"
 	set httpLite_channel $channel
     }
-    set buffer ""
     after 120 update; # This kicks Windows machines for this
-    puts "channel : $channel - from Address: $addr Port: $port"
-    puts "The default state for blocking is: \
-	[chan configure $channel -blocking]"
-    puts "The default buffer size is : \
-	[fconfigure $channel -buffersize]"
     # Set this channel to be non-blocking.
-    set smo [chan configure $channel -blocking 0 -translation auto  -encoding utf-8 -buffersize 1026]
-    puts "After fconfigure the state for blocking is:[chan configure $channel -blocking]"
-    # Change the buffer size to be smaller
-    chan configure $channel -buffersize 2052
-    puts "After fconfigure buffer size is: \
-	[chan configure $channel -buffersize]\n"
+    chan configure $channel -blocking 0 -translation auto  -encoding utf-8 -buffersize 1000000
+    #puts "After fconfigure the state for blocking is:[chan configure $channel -blocking]"
     # When input is available, read it.
-    fileevent $channel readable "::private::readLine server $channel buffer"
+    fileevent $channel readable "::private::readLine $channel"
     
 }
 
+
+# Generalize server by calling the inernal server 
 # Call the internal Server with the server Routine
 proc ::private::createServer {port type} {
     #TODO: Generate AES to wrap transactions [::tls::socket -options ]
@@ -85,20 +78,22 @@ proc ::private::createServer {port type} {
     }
 }
 
+# Main interface to the server
 proc ::httpLite::listen {port server_init {type ""}} {
     set server_channel [::private::createServer $port $type]
     catch {server_channel} msg
     if {$server_channel ne ""} {
-	puts "Server: $server_channel"
-	puts "Server Initiated!!"
+	#puts "Server: $server_channel"
+	#puts "Server Initiated!!"
 	$server_init
     }  else {
 	puts "ERROR: $msg"
     }
-    vwait forever
+        vwait forever
     # TODO: Load balancer <Software load manager <(Hardware with fast timing)>>
 }
 
+# Routine for adding hooks/callback for server internal states
 proc ::httpLite::use {cb} {
     set err_midw_match [regexp {^(error)+.*?} $cb] 
     if {$err_midw_match != 0} {
@@ -120,6 +115,7 @@ proc ::httpLite::use {cb} {
 }
 
 
+# Request Method Routines
 proc ::httpLite::get {path cb} {
     httpLiteRouter get $path $cb
 }
