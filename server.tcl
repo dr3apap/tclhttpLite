@@ -1,4 +1,5 @@
-#! /usr/bin/env tclsh
+#!/usr/bin/env tclsh
+
 # Expose as package
 package provide httpLite 1.0                   ;#(Main Package)
 lappend auto_path [file dirname [info script]] ;#(Add to TCL PATH ENV)

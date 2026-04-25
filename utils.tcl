@@ -1,4 +1,5 @@
-#! /usr/bin/env tclsh
+#!/usr/bin/env tclsh
+
 package provide dr3Utils 1.0
 
 namespace eval ::dr3Utils {
