@@ -1,11 +1,11 @@
 *~
 *.env
 *.txt
-utils.tcl
 public/
 home/
-.png
-.js~?
-.css
-.html
+*.png
+*.js
+*.css
+*.html
 client.tcl
+private.tcl
