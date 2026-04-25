@@ -1,10 +1,11 @@
-lappend auto_path [file dirname [info script]] 
-package require httpLiteUtils 1.0
-package require Tcl 8.6
+#! /usr/bin/env tclsh
 package provide httpLiteRouter 1.0 
+lappend auto_path [file dirname [info script]] 
+package require Tcl 8.6
+package require httpLiteUtils 1.0
+
 namespace eval ::httpLiteRouter {
     namespace export get post patch delete headers
-    namespace import ::httpLiteUtils::input
     variable httpLiteRouter_obj {};# Router object that hold req_target<keys> and target handler<values=cb>
     variable OK 0       ;# confform to TcL exit SUCCESS 
     variable ERROR 1    ;# conform to TCL  exit Error
@@ -25,7 +26,7 @@ proc ::httpLiteRouter::dupKeys {msg type method route_obj}  {
     puts "R->OBJECT:$route_obj"
     puts "Handler:$reqHandler Target:$req_tgt Router:$httpLiteRouter_obj"
     # get the user input<ADVISE>
-    set advise [string tolower [::httpLiteUtils::input $msg $type -n "u|update" "|" "a|abort"]]
+    set advise [string tolower [::httpLiteUtils input $msg $type -n "u|update" "|" "a|abort"]]
     if {$advise eq "u" || $advise eq "update"} {
 	dict set httpLiteRouter_obj $method [dict set $route_obj $req_tgt $reqHandler]
 	puts "ROUTER: $httpLiteRouter_obj"
@@ -47,10 +48,9 @@ proc ::httpLiteRouter::get {req_tgt reqHandler} {
 	dict set httpLiteRouter_obj get [dict set get_route $req_tgt $reqHandler]
 	return OK
     }
-    dict set  httpLiteRouter_obj get [dict set {} $req_tgt $reqHandler]
+    dict set httpLiteRouter_obj get [dict set {} $req_tgt $reqHandler]
     return OK
 }
-
 
 proc ::httpLiteRouter::post {req_tgt reqHandler} {
     variable httpLiteRouter_obj
