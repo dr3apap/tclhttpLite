@@ -1,22 +1,32 @@
+#! /usr/bin/env tclsh
 # Expose as package
 package provide httpLite 1.0                   ;#(Main Package)
-package require Tcl 8.6                        ;#(Requirement)
 lappend auto_path [file dirname [info script]] ;#(Add to TCL PATH ENV)
+#package require Tcl 8.6                        ;#(Requirement)
 package require httpLiteRouter 1.0             ;#(ROuter Version)
+package require httpLiteUtils 1.0
+package require dr3Utils 1.0
+#puts "[info body ::httpLiteUtils::input]"
 # Interface to the Application
 namespace eval ::httpLite {
-    namespace export listen use get post patch delete
-    # Hooks into the internal Routing Routines and States
+    namespace export listen use get post patch delete wsStart wsDone
+    # Hooks into the internal Routing routines and states
+    # TODO: A routine that return the Router namespace
     namespace eval ::httpLiteRouter {
 	namespace ensemble create
 	namespace export get post patch delete headers 
     }
-    
 }
 
-# Internal Low Level Routines and States
+# General LIBRARY
+namespace eval ::dr3Utils {
+    namespace ensemble create
+}
+
+# HTTPLITE: Internal Low Level Routines and States
 namespace eval ::private {
     package require httpLiteUtils 1.0  ;# Version
+    variable on_done 0
     variable default_server ""         ;# maybe Workers List?
     variable httpLite_midw {}          ;# Middleware
     variable httpLite_midw_len 0
