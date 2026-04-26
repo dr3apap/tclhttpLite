@@ -245,7 +245,7 @@ proc ::private::defaultNotFound {req res {next ""} } {
 	    res::status 200
 	    res::end $icon
 	    return 0
-
+	    
 	} else {
 	    res::setHeaders [dr3Utils::mapKeyVal mapkv {"content-type" "content-length"} [list "image/x-icon" 0]]
 	    res::status 204
@@ -290,7 +290,7 @@ proc ::private::next { {err ""}} {
 	    return "<MIDDLEWARE $midw_cb $::private::next_midw>"
 	}
     }
-	
+    
 }
 
 # compute Req-Header
@@ -301,5 +301,5 @@ proc ::private::buildReqHeader {req_obj header_dict} {
     } else {
 	return [dict merge $req_obj [dict create header $header_dict]]
     }
-
+    
 }
