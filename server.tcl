@@ -143,18 +143,28 @@ proc ::httpLite::wsDone {} {
 
 # Compute Request Line
 proc ::private::parseReqLine {req_line_str} {
-    #puts [format "Current REQ-LINE:=> %s\n" $req_line_str]
-   regexp -nocase -all {(?x) (\w+)\s+([^\d_]\w+\:\W{2})?/+((?:\w|\W|\d)+?(?:\w|\W|\d)+?(?:\.\w+)?)?\s+(\W?\w+\W\d+\W\d+)(?:\\r|\\n)?} $req_line_str matched_url req_method req_scheme req_target proto
-   return [dict create url $matched_url req_method [string tolower $req_method] req_scheme $req_scheme req_target $req_target proto $proto]
+    try {
+	#puts [format "Current REQ-LINE:=> %s\n" $req_line_str]
+	regexp -nocase -all {(?x) (\w+)\s+([^\d_]\w+\:\W{2})?/+((?:\w|\W|\d)+?(?:\w|\W|\d)+?(?:\.\w+)?)?\s+(\W?\w+\W\d+\W\d+)(?:\\r|\\n)?} $req_line_str matched_url req_method req_scheme req_target proto
+	return [dict create url $matched_url req_method [string tolower $req_method] req_scheme $req_scheme req_target $req_target proto $proto]
+    } on error {result options} {
+	puts "<PARAM: req_line_str> can't be empty -> \0" 
+	puts stderr "[dict get $options -errorinfo]" 
+    } 
 }
 
 # Compute Request Headers
 proc ::private::parseHeaderLines {header_str} {
-    #puts [format "Current HEADER-LINE:=> HS:%s\n" $header_str]
-    regexp -nocase {(?x) ^(\w+(?:\-?\w+)+?)\:(\s+.+)(?:\\r|\\n)?$} $header_str matched_header header_key header_val
-    #puts [format "Current HEADER-LINE:=> %s\n KEY:{%s}:VAL:{%s}" $matched_header $header_key $header_val] 
-    #puts [format "Current HEADER-LINE:=> %s\n" $matched_header] 
-    return [dict create [string tolower $header_key] $header_val]
+    try {
+	#puts [format "Current HEADER-LINE:=> HS:%s\n" $header_str]
+	regexp -nocase {(?x) ^(\w+(?:\-?\w+)+?)\:(\s+.+)(?:\\r|\\n)?$} $header_str matched_header header_key header_val
+	#puts [format "Current HEADER-LINE:=> %s\n KEY:{%s}:VAL:{%s}" $matched_header $header_key $header_val] 
+	#puts [format "Current HEADER-LINE:=> %s\n" $matched_header] 
+	return [dict create [string tolower $header_key] $header_val]
+    } on error {result options} {
+	puts "<PARAM:header_str> is empty|\0 -> end of header" 
+	puts stderr "[dict get $options -errorinfo]"
+    }
 }
 
 # Compute Host header
