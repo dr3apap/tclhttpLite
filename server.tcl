@@ -208,22 +208,21 @@ proc ::private::buildReqObj {channel} {
 	    incr ln_num
 	} elseif {$len == 0 && $ln_num == 1} {
 	    continue  
-	} elseif {$len == 0 && $ln_num > 1} {
+	} elseif {$len == 0 && $ln_num ==  2} {
+	    continue
+	}  elseif {$len  == 0 && $ln_num > 2 }   {
 	    set body_begin 1
 	    continue
-	}
-	
+	} 
 	if {$ln_num == 1} {
 	    set req_obj [dict merge $req_obj [::private::parseReqLine $line]]
 	} elseif {$ln_num == 2} {
 	    set req_obj [dict merge $req_obj [::private::parseHostLine $line]]
-	} else {
+	} elseif {($ln_num > 2) && (!$body_begin)} {
 	    set req_obj [private::buildReqHeader $req_obj [::private::parseHeaderLines $line]]
-	}    
-
-	if {$body_begin} {
+	}  else {
 	    set req_obj [dict merge $req_obj [::private::parseBodyLines $line]]
-	}
+	}   
 	append buff $line "\n" 
 	set len [string length $buff]
     }
