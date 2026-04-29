@@ -3,7 +3,7 @@
 package provide dr3Utils 1.0
 
 namespace eval ::dr3Utils {
-    namespace export readLine readLines _readLine map mapKeyVal getDictVal globPattern
+    namespace export readLine readLines _readLine map mapKeyVal getDictVal globPattern isDict
 }
 
 proc ::dr3Utils::readLines {channel cb acc {fmt "text"} {size ""}} {
@@ -122,3 +122,10 @@ proc dr3Utils::globPattern {pattern {fmt_opts {}}} {
     return [glob {*}$fmt_opts -- $pattern] 
 }
 
+
+proc dr3Utils::isDict {data} {
+    if {[catch {dict size $data}]}  {
+	return 0 ;#Not a valid dict
+    }
+    return 1 ;#valid dict
+}
