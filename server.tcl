@@ -312,3 +312,18 @@ proc ::private::buildReqHeader {req_obj header_dict} {
     }
     
 }
+
+# build a dict from request param(key,value)
+proc ::private::buildReqParamObj {req_str} {
+    set req_obj {} 
+    if {[string length $req_str] == 0 } {
+	return $req_obj
+    }
+    set eq_symbs [split $req_str "="]
+    set amp_symbs [split $eq_symbs "&"]
+    foreach {req_param} $amp_symbs {
+	regexp -nocase -all  {(?x) ^\??((?:\w+|\d+|[-]+))\s+((?:(?:\w+|\d+|[-]+)\W*?\w+?)+)} $req_param matched_key_val key val 
+	set req_obj [dict merge $req_obj [dict create $key $val]]
+    }
+    return $req_obj
+}
