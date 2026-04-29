@@ -1,4 +1,5 @@
 package provide httpLiteUtils 1.0
+package require dr3Utils 1.0
 package require Tcl 8.6
 
 namespace eval ::httpLiteUtils {
@@ -86,6 +87,9 @@ namespace eval ::httpLiteUtils {
     namespace eval ::res {
 	namespace export status json setHeaders getHeaders end
     }
+    namespace eval ::dr3Utils {
+	namespace ensemble create
+    }
     # Compute Response code and messages
     createStatusCodeandMessage
 }
@@ -114,16 +118,11 @@ proc ::httpLiteUtils::end {{payload ""} {fmt ""}} {
 # use to configure the headers table 
 proc ::httpLiteUtils::setHeaders {headers_dict} {
     variable res_headers
-    # Set headers for the current response
-    foreach {k v} $headers_dict {
-	if {[dict exists $res_headers $k]} {
-	    puts "WARNING:KEY $k exist and will be overwriten"
-	    # Give the user a way to arbot or continue
-	    set res_headers [dict merge $res_headers [dict create $k $v]]
-	}
-	set res_headers [dict merge $res_headers $headers_dict]
-    }
-    return $res_headers
+    if {[dr3Utils isDict $headers_dict]} {
+    	set res_headers [dict merge $res_headers $headers_dict]
+	return $res_headers
+    } 
+    return -code error -errorinfo {response headers must be a dict type} 
 }
 
 # User interface [res::getHeaders]
@@ -135,25 +134,25 @@ proc ::httpLiteUtils::getHeaders {} {
     # that is set through <::utils::setResHeaders>
     return $res_headers
 }
+
 # Utility for sending response header
 proc ::httpLiteSendResHeaders {channel res_headers} {
     # This need to be called internally after all headers
     # has been set
     #set res_headers ::httpLite::Utils::res_headers
     #upvar ::private::httpLite_channel channel
-    if {[dict exists $res_headers res_line]} {
-	set res_line [dict get $res_headers res_line]
+    if {[set res_line [dr3Utils getDictVal $res_headers res_line]] ne {}} {
+	#set res_line [dict get $res_headers res_line]
 	#puts "SENDING RESPONSE: $res_line"
 	puts $channel $res_line
     } else {
-	error "Please use the command \[httpLiteUtils::status \
-	<args statu_code> ?status_message \
-	to set the RESPONSE-LINE"
+	error "command should be \[httpLiteUtils::res::status \
+	<status_code> status_message?"
     }
     foreach {k v} $res_headers {
 	if {$k eq "res_line"} continue
 	#puts "SENDING RESPONSE: {$k:$v}"
-	#puts $channel [format "%s: %s" $k $v]
+	puts $channel [format "%s: %s" $k $v]
     }
 }
 
