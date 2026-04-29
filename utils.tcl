@@ -100,7 +100,11 @@ proc dr3Utils::mapKeyVal {cb list_1 list_2} {
 }
 
 proc dr3Utils::getDictVal {dict k} {
-    return [dict get $dict $k]
+    try {
+	return [dict get $dict $k]
+    } on error {} {
+	return {}
+    }
 }
 
 #catch {open "adept.log" r} fh options
