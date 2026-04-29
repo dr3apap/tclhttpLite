@@ -160,11 +160,12 @@ proc ::httpLiteSendResHeaders {channel res_headers} {
 proc ::httpLiteUtils::status {status_code {message ""}} {
     variable httpLite_statuscode_message
     variable channel
-    
-    set status_message [expr {[dict exists $httpLite_statuscode_message $status_code] ? \
-				  [dict get $httpLite_statuscode_message $status_code]:$message}]
+    if {$message ne ""} {
+	puts [httpLiteUtils::setHeaders [dict create res_line [format "HTTP/1.1 %s %s" $status_code $status_message]]]
+	return 0
+    }
+    set status_message [expr {[set default_message [dr3Utils getDictVal $httpLite_statuscode_message $status_code]] ne {} ? $default_message : $message}]
     puts [httpLiteUtils::setHeaders [dict create res_line [format "HTTP/1.1 %s %s" $status_code $status_message]]]
-    return 0
 }
 
 # Utility for sending response payload/data
