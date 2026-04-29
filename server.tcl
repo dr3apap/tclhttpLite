@@ -169,14 +169,15 @@ proc ::private::parseHeaderLines {header_str} {
 	#puts [format "Current HEADER-LINE:=> %s\n" $matched_header] 
 	return [dict create [string tolower $header_key] $header_val]
     } on error {result options} {
-	puts "<PARAM:header_str> is empty|\0 -> end of header" 
-	puts stderr "[dict get $options -errorinfo]"
+	puts "<PARAM:header_str> is empty|NULL -> end of header" 
+	puts stderr "ERROR: [dict get $options -errorinfo]"
+	return {}
     }
 }
 
 # Compute Host header
 proc ::private::parseHostLine {host_header} {
-    #puts [format "HOsT-LINE:=> %s\n" $host_header]
+    #puts [format "HOST+LINE:=> %s\n" $host_header]
     regexp -nocase {(?x) ((?:\w+\-?)+\:\s*?(?:[^\d_](?:\w{1,4}?\:\W{2}))?(?:\w{3}\.)?(?:\w+\.??\w+))(\:\d+)?(?:\\r|\\n)?} $host_header matched_host host port 
     return [dict create host_header [dict create req_host $matched_host host $host port $port]]
 }
@@ -226,6 +227,7 @@ proc ::private::buildReqObj {channel} {
 	} elseif {$ln_num == 2} {
 	    set req_obj [dict merge $req_obj [::private::parseHostLine $line]]
 	} elseif {($ln_num > 2) && (!$body_begin)} {
+	    #puts "HEADER+LINE: $line"
 	    set req_obj [private::buildReqHeader $req_obj [::private::parseHeaderLines $line]]
 	}  else {
 	    set req_obj [dict merge $req_obj [::private::parseBodyLines $line]]
